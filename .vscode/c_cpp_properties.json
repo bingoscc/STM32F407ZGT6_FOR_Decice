@@ -3,7 +3,7 @@
         {
             "name": "STM32",
             "includePath": [
-                "${workspaceFolder}/**", // 递归包含所有目录（核心）
+                "${workspaceFolder}/**",
                 "${workspaceFolder}/Core/Inc",
                 "${workspaceFolder}/Drivers/STM32F4xx_HAL_Driver/Inc",
                 "${workspaceFolder}/Drivers/CMSIS/Include"
