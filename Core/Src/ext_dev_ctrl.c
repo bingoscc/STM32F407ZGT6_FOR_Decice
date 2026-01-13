@@ -114,39 +114,39 @@ void ext_dev_free_control(void) {
 
 
     // 清除错误
-    HAL_UART_Transmit(&huart3, Clr_Err_1, sizeof(Clr_Err_1), 100);
+    HAL_UART_Transmit(&huart4, Clr_Err_1, sizeof(Clr_Err_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Clr_Err_2, sizeof(Clr_Err_2), 100);
+    HAL_UART_Transmit(&huart4, Clr_Err_2, sizeof(Clr_Err_2), 100);
     osDelay(T_Delay);
     //使能OFF
-    HAL_UART_Transmit(&huart3, Disable_1, sizeof(Disable_1), 100);
+    HAL_UART_Transmit(&huart4, Disable_1, sizeof(Disable_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Disable_2, sizeof(Disable_2), 100);
+    HAL_UART_Transmit(&huart4, Disable_2, sizeof(Disable_2), 100);
     osDelay(T_Delay);
     //工作模式为力矩模式
-    HAL_UART_Transmit(&huart3, Mode_Set_1, sizeof(Mode_Set_1), 100);
+    HAL_UART_Transmit(&huart4, Mode_Set_1, sizeof(Mode_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Mode_Set_2, sizeof(Mode_Set_2), 100);
+    HAL_UART_Transmit(&huart4, Mode_Set_2, sizeof(Mode_Set_2), 100);
     osDelay(T_Delay);
     //力矩模式下力矩值为5%
-    HAL_UART_Transmit(&huart3, Tr_Set_1, sizeof(Tr_Set_1), 100);
+    HAL_UART_Transmit(&huart4, Tr_Set_1, sizeof(Tr_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Tr_Set_2, sizeof(Tr_Set_2), 100);
+    HAL_UART_Transmit(&huart4, Tr_Set_2, sizeof(Tr_Set_2), 100);
     osDelay(T_Delay);
     //最高速度200rpm
-    HAL_UART_Transmit(&huart3, RPM_Set_1, sizeof(RPM_Set_1), 100);
+    HAL_UART_Transmit(&huart4, RPM_Set_1, sizeof(RPM_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, RPM_Set_2, sizeof(RPM_Set_2), 100);
+    HAL_UART_Transmit(&huart4, RPM_Set_2, sizeof(RPM_Set_2), 100);
     osDelay(T_Delay);
     //配置运行方向
-    HAL_UART_Transmit(&huart3, DIR_Set_1, sizeof(DIR_Set_1), 100);
+    HAL_UART_Transmit(&huart4, DIR_Set_1, sizeof(DIR_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, DIR_Set_2, sizeof(DIR_Set_2), 100);
+    HAL_UART_Transmit(&huart4, DIR_Set_2, sizeof(DIR_Set_2), 100);
     osDelay(T_Delay);
     //使能ON
-    HAL_UART_Transmit(&huart3, Enable_1, sizeof(Enable_1), 100);
+    HAL_UART_Transmit(&huart4, Enable_1, sizeof(Enable_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Enable_2, sizeof(Enable_2), 100);
+    HAL_UART_Transmit(&huart4, Enable_2, sizeof(Enable_2), 100);
 
 }
 void ext_dev_clmp_control(void) {
@@ -181,39 +181,39 @@ void ext_dev_clmp_control(void) {
     uint8_t Clr_Err_2[] = {0x02, 0x06, 0x31, 0x00, 0x00, 0x86, 0x06, 0xA7};
 
     // 清除错误
-    HAL_UART_Transmit(&huart3, Clr_Err_1, sizeof(Clr_Err_1), 100);
+    HAL_UART_Transmit(&huart4, Clr_Err_1, sizeof(Clr_Err_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Clr_Err_2, sizeof(Clr_Err_2), 100);
+    HAL_UART_Transmit(&huart4, Clr_Err_2, sizeof(Clr_Err_2), 100);
     osDelay(T_Delay);
     //使能OFF
-    HAL_UART_Transmit(&huart3, Disable_1, sizeof(Disable_1), 100);
+    HAL_UART_Transmit(&huart4, Disable_1, sizeof(Disable_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Disable_2, sizeof(Disable_2), 100);
+    HAL_UART_Transmit(&huart4, Disable_2, sizeof(Disable_2), 100);
     osDelay(T_Delay);
     //工作模式为力矩模式
-    HAL_UART_Transmit(&huart3, Mode_Set_1, sizeof(Mode_Set_1), 100);
+    HAL_UART_Transmit(&huart4, Mode_Set_1, sizeof(Mode_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Mode_Set_2, sizeof(Mode_Set_2), 100);
+    HAL_UART_Transmit(&huart4, Mode_Set_2, sizeof(Mode_Set_2), 100);
     osDelay(T_Delay);
     //力矩模式下力矩值为5%
-    HAL_UART_Transmit(&huart3, Tr_Set_1, sizeof(Tr_Set_1), 100);
+    HAL_UART_Transmit(&huart4, Tr_Set_1, sizeof(Tr_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Tr_Set_2, sizeof(Tr_Set_2), 100);
+    HAL_UART_Transmit(&huart4, Tr_Set_2, sizeof(Tr_Set_2), 100);
     osDelay(T_Delay);
     //最高速度200rpm
-    HAL_UART_Transmit(&huart3, RPM_Set_1, sizeof(RPM_Set_1), 100);
+    HAL_UART_Transmit(&huart4, RPM_Set_1, sizeof(RPM_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, RPM_Set_2, sizeof(RPM_Set_2), 100);
+    HAL_UART_Transmit(&huart4, RPM_Set_2, sizeof(RPM_Set_2), 100);
     osDelay(T_Delay);
     //配置运行方向
-    HAL_UART_Transmit(&huart3, DIR_Set_1, sizeof(DIR_Set_1), 100);
+    HAL_UART_Transmit(&huart4, DIR_Set_1, sizeof(DIR_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, DIR_Set_2, sizeof(DIR_Set_2), 100);
+    HAL_UART_Transmit(&huart4, DIR_Set_2, sizeof(DIR_Set_2), 100);
     osDelay(T_Delay);
     //使能ON
-    HAL_UART_Transmit(&huart3, Enable_1, sizeof(Enable_1), 100);
+    HAL_UART_Transmit(&huart4, Enable_1, sizeof(Enable_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Enable_2, sizeof(Enable_2), 100);
+    HAL_UART_Transmit(&huart4, Enable_2, sizeof(Enable_2), 100);
 
 }
 void ext_dev_cut_control(void) {
@@ -243,31 +243,31 @@ void ext_dev_cut_control(void) {
     uint8_t Clr_Err[] = {0x07, 0x06, 0x31, 0x00, 0x00, 0x86, 0x06, 0xF2};
 
     // 清除错误
-    HAL_UART_Transmit(&huart3, Clr_Err, sizeof(Clr_Err), 100);
+    HAL_UART_Transmit(&huart4, Clr_Err, sizeof(Clr_Err), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Disable, sizeof(Disable), 100);
+    HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Mode_Set, sizeof(Mode_Set), 100);
+    HAL_UART_Transmit(&huart4, Mode_Set, sizeof(Mode_Set), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Tr_Set, sizeof(Tr_Set), 100);
+    HAL_UART_Transmit(&huart4, Tr_Set, sizeof(Tr_Set), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, RPM_Set, sizeof(RPM_Set), 100);
+    HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, DIR_Set_2, sizeof(DIR_Set_2), 100);
+    HAL_UART_Transmit(&huart4, DIR_Set_2, sizeof(DIR_Set_2), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Enable, sizeof(Enable), 100);
+    HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
     osDelay(1000);
-    HAL_UART_Transmit(&huart3, Clr_Err, sizeof(Clr_Err), 100);
+    HAL_UART_Transmit(&huart4, Clr_Err, sizeof(Clr_Err), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Disable, sizeof(Disable), 100);
+    HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Mode_Set, sizeof(Mode_Set), 100);
+    HAL_UART_Transmit(&huart4, Mode_Set, sizeof(Mode_Set), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Tr_Set, sizeof(Tr_Set), 100);
+    HAL_UART_Transmit(&huart4, Tr_Set, sizeof(Tr_Set), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, RPM_Set, sizeof(RPM_Set), 100);
+    HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, DIR_Set_1, sizeof(DIR_Set_1), 100);
+    HAL_UART_Transmit(&huart4, DIR_Set_1, sizeof(DIR_Set_1), 100);
     osDelay(T_Delay);
-    HAL_UART_Transmit(&huart3, Enable, sizeof(Enable), 100);
+    HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
 }

@@ -119,6 +119,7 @@ extern void MX_LWIP_Init(void);
 extern TIM_HandleTypeDef htim3;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart3;
+extern UART_HandleTypeDef huart4;
 
 // 送料机控制指令
 // 故障复位命令
@@ -1058,38 +1059,20 @@ void StartETHTask(void *argument) {
 }
 
 static uint16_t T_Delay = 30;               // 发送间隔
-#define FEED_CALC_FACTOR_NUMERATOR   36000  // 分子：360 * 100，保留2位小数精度
-#define FEED_CALC_FACTOR_DENOMINATOR 13393  // 分母：PI * 36.3 * 1.175 * 100 的近似整数
+#define FEED_CALC_FACTOR_NUMERATOR   12954  // 分子：π × 41.2 × 100，保留2位小数精度
+#define FEED_CALC_FACTOR_DENOMINATOR 4000   // 分母：每圈脉冲数
 
 
-uint32_t feed_calc_target_angle(uint32_t target_length_raw) {
-    // 使用整数运算计算目标角度
-    // 公式：target_angle = target_length_raw * 36000 / 13393
-    // 这等价于：target_length_raw * 360 / (PI * 36.3 * 1.175)
-    
-    // 为防止溢出，检查输入值
-    if (target_length_raw > UINT32_MAX / FEED_CALC_FACTOR_NUMERATOR) {
-        LOG_ERROR("Target length too large, may cause overflow");
-        return 0;
-    }
-    
-    uint64_t temp_result = (uint64_t)target_length_raw * FEED_CALC_FACTOR_NUMERATOR;
-    uint32_t target_angle = (uint32_t)(temp_result / FEED_CALC_FACTOR_DENOMINATOR);
-    
-    LOG_DEBUG("Feed calc: raw=%u, angle=%u", target_length_raw, target_angle);
-    
-    return target_angle;
-}
-uint16_t feed_get_encoder_count(void) {
+uint32_t feed_get_encoder_count(void) {
     return __HAL_TIM_GET_COUNTER(&htim3);
 }
 void StartFeedingTask(void *argument) {
     ActionMsg_t recv_msg;               // 队列消息
     BaseType_t xStatus;                 // 队列操作状态
-    uint16_t start_count        = 0;    // 开始时编码器计数值
-    uint16_t current_count      = 0;    // 当前编码器计数值
+    uint32_t start_count        = 0;    // 开始时编码器计数值
+    uint32_t current_count      = 0;    // 当前编码器计数值
     uint32_t target_length      = 0;    // 目标长度
-    uint32_t target_angle       = 0;    // 目标角度
+    // uint32_t target_angle       = 0;    // 目标角度（已不再使用）
     int32_t angle_difference    = 0;    // 角度差值
     uint8_t stop_flag           = 0;    // 停止标志
     uint32_t task_start_tick    = 0;    // 任务启动时间戳
@@ -1140,36 +1123,36 @@ void StartFeedingTask(void *argument) {
                         goto feeding_cleanup;
                     }
 
-                    // 计算目标角度
-                    target_angle = feed_calc_target_angle(target_length);
+                    // 不再计算目标角度，直接使用目标长度
+                    LOG_DEBUG("StartFeedingTask: Start feeding (target_length = %d)", target_length);
                     
                     Feeding_Sys_St = 1; // 标记系统运行中
 
                     // 初始化电机：复位、禁用、设置模式、设置速度
-                    HAL_UART_Transmit(&huart3, Reset, sizeof(Reset), 100);
+                    HAL_UART_Transmit(&huart4, Reset, sizeof(Reset), 100);
                     vTaskDelay(T_Delay);
-                    HAL_UART_Transmit(&huart3, Disable, sizeof(Disable), 100);
+                    HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
                     vTaskDelay(T_Delay);
-                    HAL_UART_Transmit(&huart3, Mode_Set, sizeof(Mode_Set), 100);
+                    HAL_UART_Transmit(&huart4, Mode_Set, sizeof(Mode_Set), 100);
                     vTaskDelay(T_Delay);
-                    HAL_UART_Transmit(&huart3, RPM_Set, sizeof(RPM_Set), 100);
+                    HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
                     vTaskDelay(T_Delay);
 
                     // 根据方向设置电机
                     switch(direction) {
                         case FEED_DIR_FORWARD: // 正向送料
-                            HAL_UART_Transmit(&huart3, DIR_Set_CW, sizeof(DIR_Set_CW), 100);
+                            HAL_UART_Transmit(&huart4, DIR_Set_CW, sizeof(DIR_Set_CW), 100);
                             vTaskDelay(T_Delay);
-                            HAL_UART_Transmit(&huart3, Enable, sizeof(Enable), 100);
-                            LOG_INFO("StartFeedingTask: Forward feeding, start_count = %d, target_angle = %d", 
-                                     start_count, target_angle);
+                            HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
+                            LOG_INFO("StartFeedingTask: Forward feeding, start_count = %d, target_length = %d", 
+                                     start_count, target_length);
                             break;
                         case FEED_DIR_BACKWARD: // 反向送料
-                            HAL_UART_Transmit(&huart3, DIR_Set_CCW, sizeof(DIR_Set_CCW), 100);
+                            HAL_UART_Transmit(&huart4, DIR_Set_CCW, sizeof(DIR_Set_CCW), 100);
                             vTaskDelay(T_Delay);
-                            HAL_UART_Transmit(&huart3, Enable, sizeof(Enable), 100);
-                            LOG_INFO("StartFeedingTask: Backward feeding, start_count = %d, target_angle = %d", 
-                                     start_count, target_angle);
+                            HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
+                            LOG_INFO("StartFeedingTask: Backward feeding, start_count = %d, target_length = %d", 
+                                     start_count, target_length);
                             break;
                         default:
                             LOG_ERROR("StartFeedingTask: Invalid feed direction: %d", direction);
@@ -1194,12 +1177,20 @@ void StartFeedingTask(void *argument) {
                             stop_flag = 1;
                             break;
                         }
-                        // 计算当前角度差 - 使用强制类型转换为有符号整型，自动处理溢出问题
-                        int32_t angle_difference = (int16_t)(current_count - start_count);
 
-                        // 计数值→长度→角度（和送料指令的转换逻辑完全一致）
-                        uint32_t current_length = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_DENOMINATOR / FEED_CALC_FACTOR_NUMERATOR;
-                        uint32_t current_angle = feed_calc_target_angle(current_length);
+                        // 计算当前角度差 - 使用强制类型转换为有符号整型，自动处理溢出问题
+                        int32_t angle_difference = (int32_t)(current_count - start_count);
+                        // LOG_DEBUG("StartFeedingTask: Current angle difference = %d", angle_difference);
+                        uint32_t length_difference = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_NUMERATOR / FEED_CALC_FACTOR_DENOMINATOR;
+                        if(length_difference >= target_length) {
+                            LOG_INFO("StartFeedingTask: Feeding complete! Stop Feeding");
+                            stop_flag = 1;
+                            break;
+                        }
+
+                        // // 计数值→长度→角度（和送料指令的转换逻辑完全一致）
+                        // uint32_t current_length = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_DENOMINATOR / FEED_CALC_FACTOR_NUMERATOR;
+                        // uint32_t current_angle = feed_calc_target_angle(current_length);
                         // // 计算当前角度差
                         // if (direction == FEED_DIR_FORWARD) {
                         //     // 正向：当前计数应该比开始计数大
@@ -1223,19 +1214,19 @@ void StartFeedingTask(void *argument) {
                         // uint32_t current_length = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_DENOMINATOR / FEED_CALC_FACTOR_NUMERATOR;
                         // uint32_t current_angle = feed_calc_target_angle(current_length);
 
-                        // 调试日志（每100ms打印一次）
-                        if((osKernelGetTickCount() - task_start_tick) % 100 == 0) {
-                            LOG_DEBUG("StartFeedingTask: Current angle = %d , Target = %d", 
-                                     current_angle, target_angle);
-                        }
+                        // // 调试日志（每100ms打印一次）
+                        // if((osKernelGetTickCount() - task_start_tick) % 100 == 0) {
+                        //     LOG_DEBUG("StartFeedingTask: Current angle = %d , Target = %d", 
+                        //              current_angle, target_angle);
+                        // }
 
-                        // 达到目标长度停止
-                        if (current_angle >= target_angle) {
-                            LOG_INFO("StartFeedingTask: Reach target (current_angle = %d ≥ %d)",
-                                     current_angle, target_angle);
-                            stop_flag = 1;
-                            break;
-                        }
+                        // // 达到目标长度停止
+                        // if (current_angle >= target_angle) {
+                        //     LOG_INFO("StartFeedingTask: Reach target (current_angle = %d ≥ %d)",
+                        //              current_angle, target_angle);
+                        //     stop_flag = 1;
+                        //     break;
+                        // }
 
                         vTaskDelay(pdMS_TO_TICKS(20)); // 20ms延时
 
@@ -1250,26 +1241,26 @@ void StartFeedingTask(void *argument) {
                     // ========== 电机停机+资源清理 ==========
                 feeding_cleanup:
                     // 停止电机
-                    HAL_UART_Transmit(&huart3, Disable, sizeof(Disable), 100);
+                    HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
                     
                     // 重置状态
                     Feeding_Sys_St = 0;
                     Feeding_DIR = 0;
-                    target_angle = 0;
+                    target_length = 0;
                     LOG_INFO("StartFeedingTask: Feeding stopped, cleanup done");
                     break;
                 }
                 case ACTION_FEEDING_FORCE_STOP: {
                     // 收到强制停止指令，停止电机
                     LOG_INFO("StartFeedingTask: Receive force stop cmd from queue");
-                    HAL_UART_Transmit(&huart3, Disable, sizeof(Disable), 100);
+                    HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
                     g_feeding_force_stop_flag = 1;
                     break;
                 }
                 case ACTION_SYSTEM_STOP: {
                     // 收到系统停止指令，退出任务
                     LOG_INFO("StartFeedingTask: Receive system stop cmd from queue");
-                    HAL_UART_Transmit(&huart3, Disable, sizeof(Disable), 100);
+                    HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
                     vQueueDelete(g_feeding_action_queue);
                     g_feeding_action_queue = NULL;
                     osThreadExit();
