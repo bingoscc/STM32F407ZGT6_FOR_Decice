@@ -1066,28 +1066,249 @@ static uint16_t T_Delay = 30;               // 发送间隔
 uint32_t feed_get_encoder_count(void) {
     return __HAL_TIM_GET_COUNTER(&htim3);
 }
+// void StartFeedingTask(void *argument) {
+//     ActionMsg_t recv_msg;               // 队列消息
+//     BaseType_t xStatus;                 // 队列操作状态
+//     uint32_t start_count        = 0;    // 开始时编码器计数值
+//     uint32_t current_count      = 0;    // 当前编码器计数值
+//     uint32_t target_length      = 0;    // 目标长度
+//     // uint32_t target_angle       = 0;    // 目标角度（已不再使用）
+//     int32_t angle_difference    = 0;    // 角度差值
+//     uint8_t stop_flag           = 0;    // 停止标志
+//     uint32_t task_start_tick    = 0;    // 任务启动时间戳
+//     feed_direction_t direction  = 0;    // 方向
+    
+
+//     if((htim3.Instance->CR1 & TIM_CR1_CEN) == 0) {
+//         // 启动TIM3编码器模式计数（硬件配置已由CubeMX完成，仅需启动）
+//         if (HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL) != HAL_OK) {
+//             LOG_ERROR("StartFeedingTask: TIM3 encoder start failed!");
+//             // 初始化失败则退出任务
+//             osThreadExit();
+//         }
+//         __HAL_TIM_SET_COUNTER(&htim3, 0);
+//         LOG_INFO("StartFeedingTask: TIM3 encoder initialized and started");
+
+//     } else {
+//         LOG_DEBUG("StartFeedingTask: TIM3 encoder already running");
+//     }
+
+//     LOG_INFO("StartFeedingTask: Feeding control task started (FreeRTOS queue)");
+    
+//     for(;;) {
+//         // 阻塞等待队列消息
+//         xStatus = xQueueReceive(g_feeding_action_queue, &recv_msg, portMAX_DELAY);
+        
+//         if(xStatus == pdPASS) {
+//             // 解析动作类型
+//             switch(recv_msg.action_type) {
+//                 case ACTION_FEEDING_CTRL: {
+//                     // 重置停止标志和时间戳
+//                     g_feeding_force_stop_flag = 0;
+//                     stop_flag = 0;
+//                     task_start_tick = osKernelGetTickCount();
+//                     __HAL_TIM_SET_COUNTER(&htim3, 0);
+
+//                     // 赋值送料参数
+//                     target_length = recv_msg.params.feeding_params.target_length;
+//                     direction = recv_msg.params.feeding_params.direction;
+                    
+//                     LOG_INFO("StartFeedingTask: Receive Feeding CMD (target_length = %d , dir = %d)",
+//                              target_length, direction);
+
+//                     // 读取当前编码器值作为起始值
+//                     start_count = feed_get_encoder_count();
+//                     if(start_count == 0xFFFF) {
+//                         LOG_ERROR("StartFeedingTask: Encoder read failed!");
+//                         stop_flag = 1;
+//                         goto feeding_cleanup;
+//                     }
+
+//                     // 不再计算目标角度，直接使用目标长度
+//                     LOG_DEBUG("StartFeedingTask: Start feeding (target_length = %d)", target_length);
+                    
+//                     Feeding_Sys_St = 1; // 标记系统运行中
+
+//                     // 初始化电机：复位、禁用、设置模式、设置速度
+//                     HAL_UART_Transmit(&huart4, Reset, sizeof(Reset), 100);
+//                     vTaskDelay(T_Delay);
+//                     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
+//                     vTaskDelay(T_Delay);
+//                     HAL_UART_Transmit(&huart4, Mode_Set, sizeof(Mode_Set), 100);
+//                     vTaskDelay(T_Delay);
+//                     HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
+//                     vTaskDelay(T_Delay);
+
+//                     // 根据方向设置电机
+//                     switch(direction) {
+//                         case FEED_DIR_FORWARD: // 正向送料
+//                             HAL_UART_Transmit(&huart4, DIR_Set_CW, sizeof(DIR_Set_CW), 100);
+//                             vTaskDelay(T_Delay);
+//                             HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
+//                             LOG_INFO("StartFeedingTask: Forward feeding, start_count = %d, target_length = %d", 
+//                                      start_count, target_length);
+//                             break;
+//                         case FEED_DIR_BACKWARD: // 反向送料
+//                             HAL_UART_Transmit(&huart4, DIR_Set_CCW, sizeof(DIR_Set_CCW), 100);
+//                             vTaskDelay(T_Delay);
+//                             HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
+//                             LOG_INFO("StartFeedingTask: Backward feeding, start_count = %d, target_length = %d", 
+//                                      start_count, target_length);
+//                             break;
+//                         default:
+//                             LOG_ERROR("StartFeedingTask: Invalid feed direction: %d", direction);
+//                             stop_flag = 1;
+//                             goto feeding_cleanup;
+//                     }
+
+//                     // ========== 闭环控制主循环 ==========
+//                     while(!stop_flag) {
+//                         // 检测中途停止标志
+//                         if(g_feeding_force_stop_flag == 1) {
+//                             LOG_INFO("StartFeedingTask: Force stop detected! Stop Feeding immediately");
+//                             g_feeding_force_stop_flag = 0;
+//                             stop_flag = 1;
+//                             break;
+//                         }
+                                                
+//                         // 检查是否达到目标
+//                         current_count = feed_get_encoder_count();
+//                         // if(current_count == 0xFFFF) {
+//                         //     LOG_ERROR("StartFeedingTask: Encoder read failed in loop!");
+//                         //     stop_flag = 1;
+//                         //     break;
+//                         // }
+
+//                         // 计算当前角度差 - 使用强制类型转换为有符号整型，自动处理溢出问题
+//                         int32_t angle_difference = (int32_t)(current_count - start_count);
+//                         // LOG_DEBUG("StartFeedingTask: Current angle difference = %d", angle_difference);
+//                         // // uint32_t length_difference = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_NUMERATOR / FEED_CALC_FACTOR_DENOMINATOR;
+//                         // uint32_t length_difference = (uint32_t)(angle_difference / 32);
+//                         // if(length_difference >= target_length) {
+//                         //     LOG_INFO("StartFeedingTask: Feeding complete! Stop Feeding");
+//                         //     stop_flag = 1;
+//                         //     break;
+//                         // }
+//                         uint32_t length_mm_x1000 = abs(angle_difference) * 314159 * 40 / 4000 / 1000;
+//                         if(length_mm_x1000 >= target_length * 1000) { // target_length也放大1000倍
+//                             stop_flag = 1;
+//                             break;
+//                         }
+//                         // // 计数值→长度→角度（和送料指令的转换逻辑完全一致）
+//                         // uint32_t current_length = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_DENOMINATOR / FEED_CALC_FACTOR_NUMERATOR;
+//                         // uint32_t current_angle = feed_calc_target_angle(current_length);
+//                         // // 计算当前角度差
+//                         // if (direction == FEED_DIR_FORWARD) {
+//                         //     // 正向：当前计数应该比开始计数大
+//                         //     if (current_count >= start_count) {
+//                         //         angle_difference = current_count - start_count;
+//                         //     } else {
+//                         //         // 处理计数器翻转情况（从65535到0）
+//                         //         angle_difference = (0xFFFF - start_count) + current_count + 1;
+//                         //     }
+//                         // } else {
+//                         //     // 反向：当前计数应该比开始计数小
+//                         //     if (current_count <= start_count) {
+//                         //         angle_difference = start_count - current_count;
+//                         //     } else {
+//                         //         // 处理计数器翻转情况（从0到65535）
+//                         //         angle_difference = (0xFFFF - current_count) + start_count + 1;
+//                         //     }
+//                         // }
+
+//                         // // 计数值→长度→角度（和送料指令的转换逻辑完全一致）
+//                         // uint32_t current_length = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_DENOMINATOR / FEED_CALC_FACTOR_NUMERATOR;
+//                         // uint32_t current_angle = feed_calc_target_angle(current_length);
+
+//                         // // 调试日志（每100ms打印一次）
+//                         // if((osKernelGetTickCount() - task_start_tick) % 100 == 0) {
+//                         //     LOG_DEBUG("StartFeedingTask: Current angle = %d , Target = %d", 
+//                         //              current_angle, target_angle);
+//                         // }
+
+//                         // // 达到目标长度停止
+//                         // if (current_angle >= target_angle) {
+//                         //     LOG_INFO("StartFeedingTask: Reach target (current_angle = %d ≥ %d)",
+//                         //              current_angle, target_angle);
+//                         //     stop_flag = 1;
+//                         //     break;
+//                         // }
+
+//                         vTaskDelay(pdMS_TO_TICKS(20)); // 20ms延时
+
+//                         // 超时防护（10秒）
+//                         if(osKernelGetTickCount() - task_start_tick > pdMS_TO_TICKS(10000)) {
+//                             LOG_ERROR("StartFeedingTask: Timeout (10s), force stop!");
+//                             stop_flag = 1;
+//                             break;
+//                         }
+//                     }
+
+//                     // ========== 电机停机+资源清理 ==========
+//                 feeding_cleanup:
+//                     // 停止电机
+//                     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
+                    
+//                     // 重置状态
+//                     Feeding_Sys_St = 0;
+//                     Feeding_DIR = 0;
+//                     target_length = 0;
+//                     LOG_INFO("StartFeedingTask: Feeding stopped, cleanup done");
+//                     break;
+//                 }
+//                 case ACTION_FEEDING_FORCE_STOP: {
+//                     // 收到强制停止指令，停止电机
+//                     LOG_INFO("StartFeedingTask: Receive force stop cmd from queue");
+//                     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
+//                     g_feeding_force_stop_flag = 1;
+//                     break;
+//                 }
+//                 case ACTION_SYSTEM_STOP: {
+//                     // 收到系统停止指令，退出任务
+//                     LOG_INFO("StartFeedingTask: Receive system stop cmd from queue");
+//                     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
+//                     vQueueDelete(g_feeding_action_queue);
+//                     g_feeding_action_queue = NULL;
+//                     osThreadExit();
+//                     break;
+//                 }
+//                 default: {
+//                     LOG_WARN("StartFeedingTask: Receive invalid action type: %d", recv_msg.action_type);
+//                     break;
+//                 }
+//             }
+//         } else {
+//             LOG_WARN("StartFeedingTask: Read queue failed (status = %d)", xStatus);
+//         }
+//     }
+
+//     // 容错退出
+//     LOG_ERROR("StartFeedingTask: Unexpected exit");
+//     if(g_feeding_action_queue != NULL) {
+//         vQueueDelete(g_feeding_action_queue);
+//         g_feeding_action_queue = NULL;
+//     }
+//     osThreadExit();
+// }
 void StartFeedingTask(void *argument) {
     ActionMsg_t recv_msg;               // 队列消息
     BaseType_t xStatus;                 // 队列操作状态
-    uint32_t start_count        = 0;    // 开始时编码器计数值
     uint32_t current_count      = 0;    // 当前编码器计数值
-    uint32_t target_length      = 0;    // 目标长度
-    // uint32_t target_angle       = 0;    // 目标角度（已不再使用）
-    int32_t angle_difference    = 0;    // 角度差值
+    uint32_t last_count         = 0;    // 上一次编码器计数值
+    uint32_t target_length      = 0;    // 目标长度（单位：mm）
+    uint32_t total_pulse_diff   = 0;    // 累计总脉冲差（绝对值，32位）
     uint8_t stop_flag           = 0;    // 停止标志
     uint32_t task_start_tick    = 0;    // 任务启动时间戳
-    feed_direction_t direction  = 0;    // 方向
+    feed_direction_t direction  = 0;    // 方向（仅用于电机控制）
 
     if((htim3.Instance->CR1 & TIM_CR1_CEN) == 0) {
-        // 启动TIM3编码器模式计数（硬件配置已由CubeMX完成，仅需启动）
+        // 启动TIM3编码器模式计数
         if (HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL) != HAL_OK) {
             LOG_ERROR("StartFeedingTask: TIM3 encoder start failed!");
-            // 初始化失败则退出任务
             osThreadExit();
         }
         __HAL_TIM_SET_COUNTER(&htim3, 0);
         LOG_INFO("StartFeedingTask: TIM3 encoder initialized and started");
-
     } else {
         LOG_DEBUG("StartFeedingTask: TIM3 encoder already running");
     }
@@ -1095,40 +1316,39 @@ void StartFeedingTask(void *argument) {
     LOG_INFO("StartFeedingTask: Feeding control task started (FreeRTOS queue)");
     
     for(;;) {
-        // 阻塞等待队列消息
         xStatus = xQueueReceive(g_feeding_action_queue, &recv_msg, portMAX_DELAY);
         
         if(xStatus == pdPASS) {
-            // 解析动作类型
             switch(recv_msg.action_type) {
                 case ACTION_FEEDING_CTRL: {
-                    // 重置停止标志和时间戳
+                    // 重置所有状态
                     g_feeding_force_stop_flag = 0;
                     stop_flag = 0;
                     task_start_tick = osKernelGetTickCount();
                     __HAL_TIM_SET_COUNTER(&htim3, 0);
+                    total_pulse_diff = 0;  
+                    last_count = 0;        
 
                     // 赋值送料参数
                     target_length = recv_msg.params.feeding_params.target_length;
                     direction = recv_msg.params.feeding_params.direction;
                     
-                    LOG_INFO("StartFeedingTask: Receive Feeding CMD (target_length = %d , dir = %d)",
+                    LOG_INFO("StartFeedingTask: Receive Feeding CMD (target_length = %d mm , dir = %d)",
                              target_length, direction);
 
-                    // 读取当前编码器值作为起始值
-                    start_count = feed_get_encoder_count();
-                    if(start_count == 0xFFFF) {
+                    // 读取初始计数值
+                    current_count = feed_get_encoder_count();
+                    if(current_count == 0xFFFF) {
                         LOG_ERROR("StartFeedingTask: Encoder read failed!");
                         stop_flag = 1;
                         goto feeding_cleanup;
                     }
+                    last_count = current_count; // 初始化last_count
 
-                    // 不再计算目标角度，直接使用目标长度
-                    LOG_DEBUG("StartFeedingTask: Start feeding (target_length = %d)", target_length);
-                    
-                    Feeding_Sys_St = 1; // 标记系统运行中
+                    LOG_DEBUG("StartFeedingTask: Start feeding (target_length = %d mm)", target_length);
+                    Feeding_Sys_St = 1;
 
-                    // 初始化电机：复位、禁用、设置模式、设置速度
+                    // 电机初始化
                     HAL_UART_Transmit(&huart4, Reset, sizeof(Reset), 100);
                     vTaskDelay(T_Delay);
                     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
@@ -1138,21 +1358,19 @@ void StartFeedingTask(void *argument) {
                     HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
                     vTaskDelay(T_Delay);
 
-                    // 根据方向设置电机
+                    // 电机方向控制（仅控制转向，不参与计数）
                     switch(direction) {
-                        case FEED_DIR_FORWARD: // 正向送料
+                        case FEED_DIR_FORWARD: 
                             HAL_UART_Transmit(&huart4, DIR_Set_CW, sizeof(DIR_Set_CW), 100);
                             vTaskDelay(T_Delay);
                             HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
-                            LOG_INFO("StartFeedingTask: Forward feeding, start_count = %d, target_length = %d", 
-                                     start_count, target_length);
+                            LOG_INFO("StartFeedingTask: Forward feeding, target_length = %d mm", target_length);
                             break;
-                        case FEED_DIR_BACKWARD: // 反向送料
+                        case FEED_DIR_BACKWARD: 
                             HAL_UART_Transmit(&huart4, DIR_Set_CCW, sizeof(DIR_Set_CCW), 100);
                             vTaskDelay(T_Delay);
                             HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
-                            LOG_INFO("StartFeedingTask: Backward feeding, start_count = %d, target_length = %d", 
-                                     start_count, target_length);
+                            LOG_INFO("StartFeedingTask: Backward feeding, target_length = %d mm", target_length);
                             break;
                         default:
                             LOG_ERROR("StartFeedingTask: Invalid feed direction: %d", direction);
@@ -1160,77 +1378,67 @@ void StartFeedingTask(void *argument) {
                             goto feeding_cleanup;
                     }
 
-                    // ========== 闭环控制主循环 ==========
+                    // ========== 闭环控制主循环（核心：处理两种溢出） ==========
                     while(!stop_flag) {
-                        // 检测中途停止标志
+                        // 强制停止检测
                         if(g_feeding_force_stop_flag == 1) {
-                            LOG_INFO("StartFeedingTask: Force stop detected! Stop Feeding immediately");
+                            LOG_INFO("StartFeedingTask: Force stop detected!");
                             g_feeding_force_stop_flag = 0;
                             stop_flag = 1;
                             break;
                         }
                                                 
-                        // 检查是否达到目标
+                        // 读取当前计数值
                         current_count = feed_get_encoder_count();
-                        if(current_count == 0xFFFF) {
-                            LOG_ERROR("StartFeedingTask: Encoder read failed in loop!");
-                            stop_flag = 1;
-                            break;
-                        }
-
-                        // 计算当前角度差 - 使用强制类型转换为有符号整型，自动处理溢出问题
-                        int32_t angle_difference = (int32_t)(current_count - start_count);
-                        // LOG_DEBUG("StartFeedingTask: Current angle difference = %d", angle_difference);
-                        uint32_t length_difference = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_NUMERATOR / FEED_CALC_FACTOR_DENOMINATOR;
-                        if(length_difference >= target_length) {
-                            LOG_INFO("StartFeedingTask: Feeding complete! Stop Feeding");
-                            stop_flag = 1;
-                            break;
-                        }
-
-                        // // 计数值→长度→角度（和送料指令的转换逻辑完全一致）
-                        // uint32_t current_length = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_DENOMINATOR / FEED_CALC_FACTOR_NUMERATOR;
-                        // uint32_t current_angle = feed_calc_target_angle(current_length);
-                        // // 计算当前角度差
-                        // if (direction == FEED_DIR_FORWARD) {
-                        //     // 正向：当前计数应该比开始计数大
-                        //     if (current_count >= start_count) {
-                        //         angle_difference = current_count - start_count;
-                        //     } else {
-                        //         // 处理计数器翻转情况（从65535到0）
-                        //         angle_difference = (0xFFFF - start_count) + current_count + 1;
-                        //     }
-                        // } else {
-                        //     // 反向：当前计数应该比开始计数小
-                        //     if (current_count <= start_count) {
-                        //         angle_difference = start_count - current_count;
-                        //     } else {
-                        //         // 处理计数器翻转情况（从0到65535）
-                        //         angle_difference = (0xFFFF - current_count) + start_count + 1;
-                        //     }
-                        // }
-
-                        // // 计数值→长度→角度（和送料指令的转换逻辑完全一致）
-                        // uint32_t current_length = (uint64_t)abs(angle_difference) * FEED_CALC_FACTOR_DENOMINATOR / FEED_CALC_FACTOR_NUMERATOR;
-                        // uint32_t current_angle = feed_calc_target_angle(current_length);
-
-                        // // 调试日志（每100ms打印一次）
-                        // if((osKernelGetTickCount() - task_start_tick) % 100 == 0) {
-                        //     LOG_DEBUG("StartFeedingTask: Current angle = %d , Target = %d", 
-                        //              current_angle, target_angle);
-                        // }
-
-                        // // 达到目标长度停止
-                        // if (current_angle >= target_angle) {
-                        //     LOG_INFO("StartFeedingTask: Reach target (current_angle = %d ≥ %d)",
-                        //              current_angle, target_angle);
+                        // if(current_count == 0xFFFF) {
+                        //     LOG_ERROR("StartFeedingTask: Encoder read failed in loop!");
                         //     stop_flag = 1;
                         //     break;
                         // }
 
-                        vTaskDelay(pdMS_TO_TICKS(20)); // 20ms延时
+                        // ========== 核心：计算脉冲差（处理正向/反向两种溢出） ==========
+                        uint32_t pulse_diff = 0;
+                        uint32_t pulse_max = 0xFFFF; // 16位计数器最大值
+                        uint32_t normal_diff = abs((int32_t)current_count - (int32_t)last_count); // 正常差值（无溢出）
+                        
+                        // 判断是否是溢出场景：正常差值 > 脉冲最大值的一半 → 说明是反向溢出
+                        if(normal_diff > (pulse_max / 2)) {
+                            // 溢出场景（正向/反向都适用）：实际差值 = 脉冲最大值 - 正常差值
+                            pulse_diff = pulse_max - normal_diff + 1;
+                        } else {
+                            // 无溢出：直接用正常差值
+                            pulse_diff = normal_diff;
+                        }
 
-                        // 超时防护（10秒）
+                        // ========== 异常脉冲差过滤 ==========
+                        if(pulse_diff > 1000) { // 阈值根据电机速度调整（比如20ms最多走200脉冲就设200）
+                            LOG_WARN("StartFeedingTask: Abnormal pulse diff = %d, skip", pulse_diff);
+                            last_count = current_count;
+                            vTaskDelay(pdMS_TO_TICKS(20));
+                            continue;
+                        }
+
+                        // 累加总脉冲差（绝对值）
+                        total_pulse_diff += pulse_diff;
+                        last_count = current_count; // 更新上一次计数值
+
+                        // ========== 脉冲→长度换算 ==========
+                        // uint32_t current_length_mm = (uint32_t)((uint64_t)total_pulse_diff * 314159 * 40 / 4000 / 100000);
+                        uint32_t current_length_mm = (uint32_t)((uint64_t)total_pulse_diff * 1301002 / 10000 / 4000);
+                        
+                        LOG_DEBUG("StartFeedingTask: Total pulse = %d, Current length = %d mm, Target = %d mm",
+                                 total_pulse_diff, current_length_mm, target_length);
+
+                        // 到达目标长度停止
+                        if(current_length_mm >= target_length) {
+                            LOG_INFO("StartFeedingTask: Feeding complete! Current length = %d mm ≥ Target = %d mm",
+                                     current_length_mm, target_length);
+                            stop_flag = 1;
+                            break;
+                        }
+
+                        // 延时+超时防护
+                        vTaskDelay(pdMS_TO_TICKS(20));
                         if(osKernelGetTickCount() - task_start_tick > pdMS_TO_TICKS(10000)) {
                             LOG_ERROR("StartFeedingTask: Timeout (10s), force stop!");
                             stop_flag = 1;
@@ -1238,27 +1446,24 @@ void StartFeedingTask(void *argument) {
                         }
                     }
 
-                    // ========== 电机停机+资源清理 ==========
+                    // ========== 电机停机+清理 ==========
                 feeding_cleanup:
-                    // 停止电机
                     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
-                    
-                    // 重置状态
                     Feeding_Sys_St = 0;
                     Feeding_DIR = 0;
                     target_length = 0;
+                    total_pulse_diff = 0;
+                    last_count = 0;
                     LOG_INFO("StartFeedingTask: Feeding stopped, cleanup done");
                     break;
                 }
                 case ACTION_FEEDING_FORCE_STOP: {
-                    // 收到强制停止指令，停止电机
                     LOG_INFO("StartFeedingTask: Receive force stop cmd from queue");
                     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
                     g_feeding_force_stop_flag = 1;
                     break;
                 }
                 case ACTION_SYSTEM_STOP: {
-                    // 收到系统停止指令，退出任务
                     LOG_INFO("StartFeedingTask: Receive system stop cmd from queue");
                     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
                     vQueueDelete(g_feeding_action_queue);

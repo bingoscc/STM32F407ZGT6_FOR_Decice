@@ -27,6 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "ext_dev_ctrl.h"  // 添加外部设备控制头文件
 
 /* USER CODE END Includes */
 
@@ -98,6 +99,47 @@ int main(void)
   MX_UART4_Init();
   MX_USART3_UART_Init();
   MX_USART1_UART_Init();
+  
+    // -------------------------- 修正后的CAN过滤器配置（纯发送） --------------------------
+  CAN_FilterTypeDef CAN_FilterConfig;
+  
+  // 配置CAN1过滤器：适配新版本HAL库，仅满足外设初始化要求，不影响发送
+  CAN_FilterConfig.FilterBank = 0;                // CAN1过滤器组0
+  CAN_FilterConfig.FilterMode = CAN_FILTERMODE_IDMASK; // 修正：替换为新版本宏名
+  CAN_FilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  CAN_FilterConfig.FilterIdHigh = 0xFFFF;         // 无效ID，不接收任何报文
+  CAN_FilterConfig.FilterIdLow = 0xFFFF;
+  CAN_FilterConfig.FilterMaskIdHigh = 0xFFFF;
+  CAN_FilterConfig.FilterMaskIdLow = 0xFFFF;
+  CAN_FilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  CAN_FilterConfig.FilterActivation = ENABLE;     // 必须使能，否则部分型号CAN工作异常
+  CAN_FilterConfig.SlaveStartFilterBank = 14;     // CAN2过滤器起始组
+  
+  if (HAL_CAN_ConfigFilter(&hcan1, &CAN_FilterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  
+  // 配置CAN2过滤器（同理）
+  CAN_FilterConfig.FilterBank = 14;               // CAN2过滤器组14
+  if (HAL_CAN_ConfigFilter(&hcan2, &CAN_FilterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  // -------------------------------------------------------------------------
+  
+  // 启动CAN1（仅发送也需要启动外设）
+  if (HAL_CAN_Start(&hcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  
+  // 启动CAN2（如果不需要CAN2，可直接注释）
+  if (HAL_CAN_Start(&hcan2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
   /* USER CODE BEGIN 2 */
   // MotorVarMutex_Init();
   /* USER CODE END 2 */
@@ -185,8 +227,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM4)
-  {
+  if (htim->Instance == TIM4) {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -208,7 +249,8 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-#ifdef USE_FULL_ASSERT
+
+#ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -216,7 +258,7 @@ void Error_Handler(void)
   * @param  line: assert_param error line source number
   * @retval None
   */
-void assert_failed(uint8_t *file, uint32_t line)
+void assert_failed(uint8_t *file, uint8_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,

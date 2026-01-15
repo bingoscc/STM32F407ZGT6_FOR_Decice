@@ -1,4 +1,5 @@
 #include "ext_dev_ctrl.h"
+#include "can.h"
 #include "usart.h"
 #include "logger.h"
 #include "stm32f407xx.h"
@@ -216,58 +217,311 @@ void ext_dev_clmp_control(void) {
     HAL_UART_Transmit(&huart4, Enable_2, sizeof(Enable_2), 100);
 
 }
-void ext_dev_cut_control(void) {
-    // 使能OFF
-    // 07 06 31 00 00 06 07 52 
-    uint8_t Disable[]  = {0x07, 0x06, 0x31, 0x00, 0x00, 0x06, 0x07, 0x52};
-    // 工作模式为力矩模式
-    // 07 06 35 00 00 04 87 A3 
-    uint8_t Mode_Set[]  = {0x07, 0x06, 0x35, 0x00, 0x00, 0x04, 0x87, 0xA3};
-    // 力矩模式下力矩值为20%
-    // 07 06 3C 00 00 C8 84 6A 
-    uint8_t Tr_Set[]  = {0x07, 0x06, 0x3C, 0x00, 0x00, 0xC8, 0x84, 0x6A};
-    // uint8_t Tr_Set_2[]  = {0x02, 0x06, 0x3C, 0x00, 0x05, 0x00, 0x86, 0xF9};
-    // 最高速度200rpm
-    // 07 10 6F 00 00 02 04 2A AA 00 04 2D 2E
-    uint8_t RPM_Set[]  = {0x07, 0x10, 0x6F, 0x00, 0x00, 0x02, 0x04, 0x2A, 0xAA, 0x00, 0x04, 0x2D, 0x2E};
-    // 配置运行方向
-    // 07 06 47 00 00 00 9D 18 
-    // 07 06 47 00 00 01 5C D8 
-    uint8_t DIR_Set_1[]  = {0x07, 0x06, 0x47, 0x00, 0x00, 0x00, 0x9D, 0x18};
-    uint8_t DIR_Set_2[]  = {0x07, 0x06, 0x47, 0x00, 0x00, 0x01, 0x5C, 0xD8};
-    // 使能ON
-    // 07 06 31 00 00 0F C7 54 
-    uint8_t Enable[]   = {0x07, 0x06, 0x31, 0x00, 0x00, 0x0F, 0xC7, 0x54};  
-    // 清除错误
-    // 07 06 31 00 00 86 06 F2 
-    uint8_t Clr_Err[] = {0x07, 0x06, 0x31, 0x00, 0x00, 0x86, 0x06, 0xF2};
+// void ext_dev_cut_control(void) {
+//     // 使能OFF
+//     // 07 06 31 00 00 06 07 52 
+//     uint8_t Disable[]  = {0x07, 0x06, 0x31, 0x00, 0x00, 0x06, 0x07, 0x52};
+//     // 工作模式为力矩模式
+//     // 07 06 35 00 00 04 87 A3 
+//     uint8_t Mode_Set[]  = {0x07, 0x06, 0x35, 0x00, 0x00, 0x04, 0x87, 0xA3};
+//     // 力矩模式下力矩值为20%
+//     // 07 06 3C 00 00 C8 84 6A 
+//     uint8_t Tr_Set[]  = {0x07, 0x06, 0x3C, 0x00, 0x00, 0xC8, 0x84, 0x6A};
+//     // uint8_t Tr_Set_2[]  = {0x02, 0x06, 0x3C, 0x00, 0x05, 0x00, 0x86, 0xF9};
+//     // 最高速度200rpm
+//     // 07 10 6F 00 00 02 04 2A AA 00 04 2D 2E
+//     uint8_t RPM_Set[]  = {0x07, 0x10, 0x6F, 0x00, 0x00, 0x02, 0x04, 0x2A, 0xAA, 0x00, 0x04, 0x2D, 0x2E};
+//     // 配置运行方向
+//     // 07 06 47 00 00 00 9D 18 
+//     // 07 06 47 00 00 01 5C D8 
+//     uint8_t DIR_Set_1[]  = {0x07, 0x06, 0x47, 0x00, 0x00, 0x00, 0x9D, 0x18};
+//     uint8_t DIR_Set_2[]  = {0x07, 0x06, 0x47, 0x00, 0x00, 0x01, 0x5C, 0xD8};
+//     // 使能ON
+//     // 07 06 31 00 00 0F C7 54 
+//     uint8_t Enable[]   = {0x07, 0x06, 0x31, 0x00, 0x00, 0x0F, 0xC7, 0x54};  
+//     // 清除错误
+//     // 07 06 31 00 00 86 06 F2 
+//     uint8_t Clr_Err[] = {0x07, 0x06, 0x31, 0x00, 0x00, 0x86, 0x06, 0xF2};
 
-    // 清除错误
-    HAL_UART_Transmit(&huart4, Clr_Err, sizeof(Clr_Err), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, Mode_Set, sizeof(Mode_Set), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, Tr_Set, sizeof(Tr_Set), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, DIR_Set_2, sizeof(DIR_Set_2), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
+//     // 清除错误
+//     HAL_UART_Transmit(&huart4, Clr_Err, sizeof(Clr_Err), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, Mode_Set, sizeof(Mode_Set), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, Tr_Set, sizeof(Tr_Set), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, DIR_Set_2, sizeof(DIR_Set_2), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
+//     osDelay(1000);
+//     HAL_UART_Transmit(&huart4, Clr_Err, sizeof(Clr_Err), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, Mode_Set, sizeof(Mode_Set), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, Tr_Set, sizeof(Tr_Set), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, DIR_Set_1, sizeof(DIR_Set_1), 100);
+//     osDelay(T_Delay);
+//     HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
+// }
+void ext_dev_cut_control(void) {
+    // 检查CAN1是否已启动，如果没有则启动它
+    if (HAL_CAN_GetState(&hcan1) == HAL_CAN_STATE_READY || 
+        HAL_CAN_GetState(&hcan1) == HAL_CAN_STATE_LISTENING) {
+        // CAN已经启动，无需重复启动
+    } else {
+        // 启动CAN1
+        if (HAL_CAN_Start(&hcan1) != HAL_OK) {
+            Error_Handler(); // CAN启动失败
+        }
+        
+        // 激活CAN1 FIFO0中断
+        if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+            Error_Handler();
+        }
+    }
+    
+    // 控制指令数据场
+    // 01. 使能，2B 40 60 00 0F 00
+    uint8_t Enable[]   = {0x2B, 0x40, 0x60, 0x00, 0x0F, 0x00};
+    // 02. 运行模式，2F 60 60 00 04 00
+    uint8_t Mode[]   = {0x2F, 0x60, 0x60, 0x00, 0x04, 0x00};
+    // 03. 运行方向，2F 7E 60 00 01 00
+    uint8_t DIR_CW[]   = {0x2F, 0x7E, 0x60, 0x00, 0x01, 0x00};
+    uint8_t DIR_CCW[]   = {0x2F, 0x7E, 0x60, 0x00, 0x00, 0x00};
+    // 04. 运行速度，23 FF 60 00 D0 55 08 00
+    uint8_t RPM_Set[]  = {0x23, 0xFF, 0x60, 0x00, 0xD0, 0x55, 0x08, 0x00};
+    // 05. 运行力矩，2B 71 60 00 C8 00
+    uint8_t Tr_Set[]  = {0x2B, 0x71, 0x60, 0x00, 0xC8, 0x00};
+    // 06. 清楚错误，2B 40 60 00 86 00
+    uint8_t Clr_Err[] = {0x2B, 0x40, 0x60, 0x00, 0x86, 0x00};
+    // 07. 禁用，2B 40 60 00 06 00
+    uint8_t Disable[] = {0x2B, 0x40, 0x60, 0x00, 0x06, 0x00};
+    
+    // 使用标准ID 0x601 发送控制命令
+    uint32_t motor_control_id = 0x601; // 标准ID
+    
+    // 执行裁断动作，清除错误>>禁用>>运行模式>>运行方向>>运行速度>>运行力矩>>使能>>等待1秒>>禁用>>运行模式>>运行方向反向>>运行速度>>运行力矩>>使能
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Clr_Err, sizeof(Clr_Err));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Disable, sizeof(Disable));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Mode, sizeof(Mode));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, DIR_CW, sizeof(DIR_CW));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, RPM_Set, sizeof(RPM_Set));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Tr_Set, sizeof(Tr_Set));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Enable, sizeof(Enable));
     osDelay(1000);
-    HAL_UART_Transmit(&huart4, Clr_Err, sizeof(Clr_Err), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, Disable, sizeof(Disable), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, Mode_Set, sizeof(Mode_Set), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, Tr_Set, sizeof(Tr_Set), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, RPM_Set, sizeof(RPM_Set), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, DIR_Set_1, sizeof(DIR_Set_1), 100);
-    osDelay(T_Delay);
-    HAL_UART_Transmit(&huart4, Enable, sizeof(Enable), 100);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Clr_Err, sizeof(Clr_Err));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Disable, sizeof(Disable));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Mode, sizeof(Mode));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, DIR_CCW, sizeof(DIR_CCW));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, RPM_Set, sizeof(RPM_Set));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Tr_Set, sizeof(Tr_Set));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Enable, sizeof(Enable));
+    osDelay(1000);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Clr_Err, sizeof(Clr_Err));
+    osDelay(20);
+    CAN1_Transmit(motor_control_id, CAN_ID_STD, Disable, sizeof(Disable));
 }
+/**
+ * @brief  发送CAN消息
+ * @param  hcan: CAN句柄指针
+ * @param  id: 消息ID (标准ID或扩展ID)
+ * @param  ide: 标识符类型 (CAN_ID_STD 或 CAN_ID_EXT)
+ * @param  rtr: 远程传输请求 (CAN_RTR_DATA 或 CAN_RTR_REMOTE)
+ * @param  data: 要发送的数据数组 (最大8字节)
+ * @param  len: 数据长度 (0-8)
+ * @retval HAL状态
+ */
+HAL_StatusTypeDef CAN_SendMessage(CAN_HandleTypeDef *hcan, uint32_t id, uint32_t ide, uint32_t rtr, uint8_t *data, uint8_t len)
+{
+    CAN_TxHeaderTypeDef TxHeader;
+    uint32_t TxMailbox;
+    
+    // 配置发送消息头
+    if (ide == CAN_ID_STD) 
+    {
+        TxHeader.StdId = id;      // 标准ID (11位)
+        TxHeader.IDE = CAN_ID_STD;
+    } 
+    else 
+    {
+        TxHeader.ExtId = id;      // 扩展ID (29位)
+        TxHeader.IDE = CAN_ID_EXT;
+    }
+    
+    TxHeader.RTR = rtr;           // 数据帧还是远程帧
+    TxHeader.DLC = len;           // 数据长度
+    TxHeader.TransmitGlobalTime = DISABLE;
+    
+    // 发送消息
+    if (HAL_CAN_AddTxMessage(hcan, &TxHeader, data, &TxMailbox) != HAL_OK)
+    {
+        return HAL_ERROR; // 发送失败
+    }
+    
+    return HAL_OK; // 发送成功
+}
+
+/**
+ * @brief  使用CAN1发送数据
+ * @param  id: 消息ID
+ * @param  ide: 标识符类型 (CAN_ID_STD 或 CAN_ID_EXT)
+ * @param  data: 要发送的数据数组
+ * @param  len: 数据长度 (最大8字节)
+ * @retval HAL状态
+ */
+HAL_StatusTypeDef CAN1_Transmit(uint32_t id, uint32_t ide, uint8_t *data, uint8_t len)
+{
+    CAN_TxHeaderTypeDef TxHeader;
+    uint32_t TxMailbox;
+    
+    // 配置发送消息头
+    if (ide == CAN_ID_STD) 
+    {
+        TxHeader.StdId = id;      // 标准ID (11位)
+        TxHeader.IDE = CAN_ID_STD;
+    } 
+    else 
+    {
+        TxHeader.ExtId = id;      // 扩展ID (29位)
+        TxHeader.IDE = CAN_ID_EXT;
+    }
+    
+    TxHeader.RTR = CAN_RTR_DATA;  // 数据帧
+    TxHeader.DLC = len;          // 数据长度
+    TxHeader.TransmitGlobalTime = DISABLE;
+    
+    // 确保长度不超过8字节
+    if (len > 8) len = 8;
+    
+    // 发送消息
+    if (HAL_CAN_AddTxMessage(&hcan1, &TxHeader, data, &TxMailbox) != HAL_OK)
+    {
+        return HAL_ERROR; // 发送失败
+    }
+    
+    return HAL_OK; // 发送成功
+}
+
+/**
+ * @brief  使用CAN2发送数据
+ * @param  id: 消息ID
+ * @param  ide: 标识符类型 (CAN_ID_STD 或 CAN_ID_EXT)
+ * @param  data: 要发送的数据数组
+ * @param  len: 数据长度 (最大8字节)
+ * @retval HAL状态
+ */
+HAL_StatusTypeDef CAN2_Transmit(uint32_t id, uint32_t ide, uint8_t *data, uint8_t len)
+{
+    CAN_TxHeaderTypeDef TxHeader;
+    uint32_t TxMailbox;
+    
+    // 配置发送消息头
+    if (ide == CAN_ID_STD) 
+    {
+        TxHeader.StdId = id;      // 标准ID (11位)
+        TxHeader.IDE = CAN_ID_STD;
+    } 
+    else 
+    {
+        TxHeader.ExtId = id;      // 扩展ID (29位)
+        TxHeader.IDE = CAN_ID_EXT;
+    }
+    
+    TxHeader.RTR = CAN_RTR_DATA;  // 数据帧
+    TxHeader.DLC = len;          // 数据长度
+    TxHeader.TransmitGlobalTime = DISABLE;
+    
+    // 确保长度不超过8字节
+    if (len > 8) len = 8;
+    
+    // 发送消息
+    if (HAL_CAN_AddTxMessage(&hcan2, &TxHeader, data, &TxMailbox) != HAL_OK)
+    {
+        return HAL_ERROR; // 发送失败
+    }
+    
+    return HAL_OK; // 发送成功
+}
+
+/**
+ * @brief  使用CAN1发送标准数据帧
+ * @param  std_id: 标准ID (11位, 范围: 0-0x7FF)
+ * @param  data: 要发送的数据数组
+ * @param  len: 数据长度 (最大8字节)
+ * @retval HAL状态
+ */
+HAL_StatusTypeDef CAN1_SendStdData(uint32_t std_id, uint8_t *data, uint8_t len)
+{
+    // 确保长度不超过8字节
+    if (len > 8) len = 8;
+    
+    return CAN_SendMessage(&hcan1, std_id, CAN_ID_STD, CAN_RTR_DATA, data, len);
+}
+
+/**
+ * @brief  使用CAN1发送扩展数据帧
+ * @param  ext_id: 扩展ID (29位, 范围: 0-0x1FFFFFFF)
+ * @param  data: 要发送的数据数组
+ * @param  len: 数据长度 (最大8字节)
+ * @retval HAL状态
+ */
+HAL_StatusTypeDef CAN1_SendExtData(uint32_t ext_id, uint8_t *data, uint8_t len)
+{
+    // 确保长度不超过8字节
+    if (len > 8) len = 8;
+    
+    return CAN_SendMessage(&hcan1, ext_id, CAN_ID_EXT, CAN_RTR_DATA, data, len);
+}
+
+/**
+ * @brief  使用CAN2发送标准数据帧
+ * @param  std_id: 标准ID (11位, 范围: 0-0x7FF)
+ * @param  data: 要发送的数据数组
+ * @param  len: 数据长度 (最大8字节)
+ * @retval HAL状态
+ */
+HAL_StatusTypeDef CAN2_SendStdData(uint32_t std_id, uint8_t *data, uint8_t len)
+{
+    // 确保长度不超过8字节
+    if (len > 8) len = 8;
+    
+    return CAN_SendMessage(&hcan2, std_id, CAN_ID_STD, CAN_RTR_DATA, data, len);
+}
+
+/**
+ * @brief  使用CAN2发送扩展数据帧
+ * @param  ext_id: 扩展ID (29位, 范围: 0-0x1FFFFFFF)
+ * @param  data: 要发送的数据数组
+ * @param  len: 数据长度 (最大8字节)
+ * @retval HAL状态
+ */
+HAL_StatusTypeDef CAN2_SendExtData(uint32_t ext_id, uint8_t *data, uint8_t len)
+{
+    // 确保长度不超过8字节
+    if (len > 8) len = 8;
+    
+    return CAN_SendMessage(&hcan2, ext_id, CAN_ID_EXT, CAN_RTR_DATA, data, len);
+}
+
+/* USER CODE END 1 */
