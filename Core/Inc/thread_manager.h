@@ -42,6 +42,7 @@ typedef enum {
     THREAD_OP_FREE_CTRL,                // 放松动作
     THREAD_OP_CUT_CTRL,                 // 裁断动作
     THREAD_OP_SAW_CTRL,                 // 圆锯动作
+    THREAD_OP_SAW_FREE,                 // 圆锯台钳释放
     THREAD_OP_MAX                       // 枚举边界（用于合法性校验）
 } thread_operation_t;
 

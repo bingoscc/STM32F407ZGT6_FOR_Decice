@@ -72,6 +72,7 @@ QueueHandle_t g_feeding_action_queue = NULL;
 #define UDP_FRAME_TSJ          0x07           // Byte1 = 0x07:套丝控制指令
 #define UDP_FRAME_Clamp        0x08           // Byte1 = 0x08:加紧控制指令
 #define UDP_FRAME_Free         0x09           // Byte1 = 0x09:放松控制指令
+#define UDP_FRAME_Saw_Free     0x0A           // Byte1 = 0x0A:圆锯台钳释放指令
 #define UDP_CHECK_BYTE_INDEX   9              // 和校验字节位置（Byte9）
 #define UDP_FRAME_VALID_LEN    10             // 有效帧长度（Byte0~Byte9）
 #define UDP_LOCAL_PORT_T       8080           // 本地发送端口
@@ -657,6 +658,11 @@ static void UDP_Recv_Callback(void *arg, struct udp_pcb *upcb, struct pbuf *p, c
     else if(recv_buf[1] == UDP_FRAME_Free) { // 放松指令
         thread_manager_send_cmd(THREAD_OP_FREE_CTRL, THREAD_TYPE_NONE, 0, 0, NULL);
         uint8_t resp[] = {UDP_FRAME_Free, UDP_RESP_OK};
+        UDP_Send_Data(resp, sizeof(resp));
+    }
+    else if(recv_buf[1] == UDP_FRAME_Saw_Free) { // 圆锯台钳放松指令
+        thread_manager_send_cmd(THREAD_OP_SAW_FREE, THREAD_TYPE_NONE, 0, 0, NULL);
+        uint8_t resp[] = {UDP_FRAME_Saw_Free, UDP_RESP_OK};
         UDP_Send_Data(resp, sizeof(resp));
     }
     // 读取状态指令
@@ -1439,7 +1445,7 @@ void StartFeedingTask(void *argument) {
 
                         // 延时+超时防护
                         vTaskDelay(pdMS_TO_TICKS(20));
-                        if(osKernelGetTickCount() - task_start_tick > pdMS_TO_TICKS(10000)) {
+                        if(osKernelGetTickCount() - task_start_tick > pdMS_TO_TICKS(60000)) {
                             LOG_ERROR("StartFeedingTask: Timeout (10s), force stop!");
                             stop_flag = 1;
                             break;

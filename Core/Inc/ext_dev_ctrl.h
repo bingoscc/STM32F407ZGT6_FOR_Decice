@@ -53,6 +53,11 @@ void ext_dev_tsj_control(void);
 void ext_dev_saw_control(void);
 
 /**
+ * @brief  锯切设备台钳释放功能
+ * @note  CAN报文控制台钳释放
+ */
+void ext_dev_saw_free(void);
+/**
  * @brief  松开设备控制功能
  * @note  控制气缸松开马达
  */

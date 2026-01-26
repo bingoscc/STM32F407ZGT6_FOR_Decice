@@ -277,6 +277,12 @@ void ThreadManagerTask(void *argument) {
                 ext_dev_clmp_control();
                 continue; 
             }
+            // 处理SAW FREE控制指令
+            if(msg.operation == THREAD_OP_SAW_FREE) {
+                LOG_INFO("ThreadMgr: Received SAW FREE control command");
+                ext_dev_saw_free();
+                continue; 
+            }
             
             // ========== 基础线程操作（创建/删除/挂起/恢复） ==========
             switch(msg.thread_type) {

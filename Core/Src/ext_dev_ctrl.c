@@ -1,5 +1,6 @@
 #include "ext_dev_ctrl.h"
 #include "can.h"
+#include "stm32f4xx.h"
 #include "usart.h"
 #include "logger.h"
 #include "stm32f407xx.h"
@@ -44,12 +45,136 @@ void ext_dev_tsj_control(void) {
 }
 
 void ext_dev_saw_control(void) {
+    /**
+    圆锯机动作流程
+    * 1、判断CAN1是否启动，未启动则启动CAN1并激活FIFO0中断
+    * 2、控制台钳夹紧，CAN报文发送流程如下：
+    *   01、清除错误:           2B 40 60 00 86 00
+        02、力矩模式:           2F 60 60 00 04 00
+        03、运行速度:           23 FF 60 00 D0 55 08 00
+        04、目标力矩:           2B 71 60 00 90 01
+        05、运行方向:           2F 7E 60 00 01 00
+        06、设置使能:           2B 40 60 00 0F 00
+        07、设置禁能:           2B 40 60 00 06 00
+        08、位置模式:           2F 60 60 00 01 00
+        09、目标位置:           23 7A 60 00 XX XX XX XX
+        10、相对位置:           2F 60 60 00 4F 00 → 2F 60 60 00 5F 00
+    * 3、控制圆锯机切割，控制继电器吸合1秒后断开
+    */
+    // 定义CAN通讯报文
+    uint32_t CAN_ID = 0x601;  // 报文ID
+    uint8_t Clear_Err[]     = {0x2B, 0x40, 0x60, 0x00, 0x86, 0x00}; // 清除错误
+    uint8_t Enable[]        = {0x2B, 0x40, 0x60, 0x00, 0x0F, 0x00}; // 使能
+    uint8_t Mode_Troque[]   = {0x2F, 0x60, 0x60, 0x00, 0x04, 0x00}; // 力矩模式
+    uint8_t Set_RPM[]       = {0x23, 0xFF, 0x60, 0x00, 0xAB, 0x2A, 0x04, 0x00}; // 运行速度100rpm  = 273067 = 42AAB
+    uint8_t Set_Troque[]    = {0x2B, 0x71, 0x60, 0x00, 0x90, 0x01}; // 目标力矩(40%)
+    uint8_t Set_DIR[]       = {0x2F, 0x7E, 0x60, 0x00, 0x00, 0x00}; // 运行方向
+    uint8_t DISABLE[]       = {0x2B, 0x40, 0x60, 0x00, 0x06, 0x00}; // 禁能
+    uint8_t Mode_Pos[]      = {0x2F, 0x60, 0x60, 0x00, 0x01, 0x00}; // 位置模式
+    uint8_t Set_Pos[]       = {0x23, 0x7A, 0x60, 0x00, 0x3C, 0xF6, 0xFF, 0xFF}; // 目标位置(FFFFF63C = -90°)
+    uint8_t Enable_Pos_1[]  = {0x2B, 0x40, 0x60, 0x00, 0x4F, 0x00}; // 相对位置控制使能报文1
+    uint8_t Enable_Pos_2[]  = {0x2B, 0x40, 0x60, 0x00, 0x5F, 0x00}; // 相对位置控制使能报文2
+
+    // 检查CAN1是否已启动，如果没有则启动它
+    if (HAL_CAN_GetState(&hcan1) == HAL_CAN_STATE_READY || 
+        HAL_CAN_GetState(&hcan1) == HAL_CAN_STATE_LISTENING) {
+    // CAN已经启动，无需重复启动
+    } else {
+        // 启动CAN1
+        if (HAL_CAN_Start(&hcan1) != HAL_OK) {
+            Error_Handler(); // CAN启动失败
+        }
+        
+        // 激活CAN1 FIFO0中断
+        if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+            Error_Handler();
+        }
+    }
+    // 发送台钳夹紧报文
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Clear_Err, sizeof(Clear_Err));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, DISABLE, sizeof(DISABLE));
+    osDelay(10);    
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Mode_Troque, sizeof(Mode_Troque));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Set_RPM, sizeof(Set_RPM));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Set_Troque, sizeof(Set_Troque));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Set_DIR, sizeof(Set_DIR));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Enable, sizeof(Enable));
+    osDelay(3000);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Clear_Err, sizeof(Clear_Err));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, DISABLE, sizeof(DISABLE));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Mode_Pos, sizeof(Mode_Pos));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Set_Pos, sizeof(Set_Pos));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Enable_Pos_1, sizeof(Enable_Pos_1));
+    osDelay(100);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Enable_Pos_2, sizeof(Enable_Pos_2));
+    osDelay(1000);
+
+
     //控制继电器吸合，开始切割
     HAL_GPIO_WritePin(GPIOG, GPIO_PIN_7, GPIO_PIN_SET);
     osDelay(1000);
     HAL_GPIO_WritePin(GPIOG, GPIO_PIN_7, GPIO_PIN_RESET);
     osDelay(100);
 }
+
+void ext_dev_saw_free(void) {
+
+    // 定义CAN通讯报文
+    uint32_t CAN_ID = 0x601;  // 报文ID
+    uint8_t Clear_Err[]     = {0x2B, 0x40, 0x60, 0x00, 0x86, 0x00}; // 清除错误
+    uint8_t Set_RPM[]       = {0x23, 0xFF, 0x60, 0x00, 0xAB, 0x2A, 0x04, 0x00}; // 运行速度100rpm  = 273067 = 42AAB
+    uint8_t Set_DIR[]       = {0x2F, 0x7E, 0x60, 0x00, 0x00, 0x00}; // 运行方向
+    uint8_t DISABLE[]       = {0x2B, 0x40, 0x60, 0x00, 0x06, 0x00}; // 禁能
+    uint8_t Mode_Pos[]      = {0x2F, 0x60, 0x60, 0x00, 0x01, 0x00}; // 位置模式
+    uint8_t Set_Pos[]       = {0x23, 0x7A, 0x60, 0x00, 0xA0, 0x15, 0xFF, 0xFF}; // 目标位置(FFFF15A0 = -2160°)
+    uint8_t Enable_Pos_1[]  = {0x2B, 0x40, 0x60, 0x00, 0x4F, 0x00}; // 相对位置控制使能报文1
+    uint8_t Enable_Pos_2[]  = {0x2B, 0x40, 0x60, 0x00, 0x5F, 0x00}; // 相对位置控制使能报文2
+
+    // 检查CAN1是否已启动，如果没有则启动它
+    if (HAL_CAN_GetState(&hcan1) == HAL_CAN_STATE_READY || 
+        HAL_CAN_GetState(&hcan1) == HAL_CAN_STATE_LISTENING) {
+    // CAN已经启动，无需重复启动
+    } else {
+        // 启动CAN1
+        if (HAL_CAN_Start(&hcan1) != HAL_OK) {
+            Error_Handler(); // CAN启动失败
+        }
+        
+        // 激活CAN1 FIFO0中断
+        if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+            Error_Handler();
+        }
+    }
+    // 发送台钳放松报文
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Clear_Err, sizeof(Clear_Err));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, DISABLE, sizeof(DISABLE));
+    osDelay(10);    
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Mode_Pos, sizeof(Mode_Pos));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Set_RPM, sizeof(Set_RPM));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Set_Pos, sizeof(Set_Pos));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Set_DIR, sizeof(Set_DIR));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Enable_Pos_1, sizeof(Enable_Pos_1));
+    osDelay(10);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, Enable_Pos_2, sizeof(Enable_Pos_2));
+    osDelay(2000);
+    CAN1_Transmit(CAN_ID, CAN_ID_STD, DISABLE, sizeof(DISABLE));
+    osDelay(100);
+}
+
 // Modbus CRC16计算函数
 static uint16_t modbus_crc16(const uint8_t *data, uint16_t length) {
     uint16_t crc = 0xFFFF;
@@ -300,8 +425,8 @@ void ext_dev_cut_control(void) {
     // 04. 运行速度，23 FF 60 00 D0 55 08 00
     uint8_t RPM_Set[]  = {0x23, 0xFF, 0x60, 0x00, 0xD0, 0x55, 0x08, 0x00};
     // 05. 运行力矩，2B 71 60 00 C8 00
-    uint8_t Tr_Set[]  = {0x2B, 0x71, 0x60, 0x00, 0xC8, 0x00};
-    // 06. 清楚错误，2B 40 60 00 86 00
+    uint8_t Tr_Set[]  = {0x2B, 0x71, 0x60, 0x00, 0x64, 0x00};
+    // 06. 清除错误，2B 40 60 00 86 00
     uint8_t Clr_Err[] = {0x2B, 0x40, 0x60, 0x00, 0x86, 0x00};
     // 07. 禁用，2B 40 60 00 06 00
     uint8_t Disable[] = {0x2B, 0x40, 0x60, 0x00, 0x06, 0x00};
